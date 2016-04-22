@@ -29,7 +29,7 @@ CustomApplicationsHandler.register("app.kevcar", new CustomApplication({
 		 * (js) defines javascript includes
 		 */
 
-		js: [],
+		js: ['Chart.min.js'],
 
 		/**
 		 * (css) defines css includes
@@ -44,6 +44,7 @@ CustomApplicationsHandler.register("app.kevcar", new CustomApplication({
 		 */
 
 		images: {
+			appPNG: 'app.png'
 
 		},
 	},
@@ -112,6 +113,20 @@ CustomApplicationsHandler.register("app.kevcar", new CustomApplication({
 	},
 
 
+	/******************************
+	*
+	* INITIALIZE GLOBAL VARIABLES
+	*
+	******************************/
+	lineChart: function() { },
+	isChartInitialized: false,
+	chartStartTime: {},
+	maxElapsedChartTimeMinutes: 15,
+	chartUpdateRate: 5000,
+	currentSpeed: 0,
+	averageConsumption: 0,
+
+
 	/***
 	 *** Application Life Cycles
 	 ***/
@@ -130,7 +145,18 @@ CustomApplicationsHandler.register("app.kevcar", new CustomApplication({
 	 */
 
 	created: function() {
+		this.speedChart = $("<canvas/>").attr({id: "speedChart", width: '775', height: '400px'})
 
+		this.chartStartTime = Date.now();
+		
+		// Set vehicle speed event subscription
+		this.subscribe(VehicleData.vehicle.speed, function(speed) {
+			this.currentSpeed = speed;
+		}.bind(this));
+
+		this.subscribe(VehicleData.fuel.averageconsumption, function(consumption) {
+			this.averageConsumption = consumption;
+		}.bind(this));
 	},
 
 	/**
@@ -144,11 +170,84 @@ CustomApplicationsHandler.register("app.kevcar", new CustomApplication({
 	 * @event
 	 * @return {void}
 	 */
-
 	focused: function() {
-
+		this.initializeChart();
+		this.updateChart();
 	},
 
+	initializeChart: function() {
+		var that = this;
+		this.drawTimer = setInterval(function() {
+			this.drawChart();
+			this.isChartInitialized = true;
+			clearInterval(this.drawTimer);
+		}.bind(this), 1000);
+	},
+
+	drawChart: function() {
+		if (!this.isChartInitialized) {
+			this.log.info("Drawing chart...");
+
+			// Set update timer
+			this.updateChart();
+
+			this.canvas.append(this.speedChart)
+			var canvas = this.speedChart.get(0),
+			ctx = canvas.getContext('2d');
+
+			var data = {
+				labels: [""],
+				datasets: [
+					{
+						label: "Speed",
+						fillColor: "rgba(220,220,220,0.2)",
+						strokeColor: "rgba(220,220,220,1)",
+						pointColor: "rgba(220,220,220,1)",
+						pointStrokeColor: "#fff",
+						pointHighlightFill: "#fff",
+						pointHighlightStroke: "rgba(220,220,220,1)",
+						data: [0]
+					},
+					{
+						label: "Fuel Consumption",
+						fillColor: "rgba(220,120,220,0.2)",
+						strokeColor: "rgba(220,120,220,1)",
+						pointColor: "rgba(220,220,220,1)",
+						pointStrokeColor: "#fff",
+						pointHighlightFill: "#fff",
+						pointHighlightStroke: "rgba(220,220,220,1)",
+						data: [0]
+					}
+				]
+			};
+			// this.Chart.defaults.global.showTooltips = false;
+
+			var options = {
+				///Boolean - Whether grid lines are shown across the chart
+				showTooltips: false,
+				scaleShowGridLines: true,
+				scaleShowHorizontalLines: true,
+				segmentShowStroke : true,
+				pointDot : false,
+				// scaleShowLabels: false,
+			};
+			this.lineChart = new Chart(ctx).Line(data, options);
+		}
+	},
+
+	updateChart: function(data) {
+		this.updateTimer = setInterval(function() {
+			var elapsedTime = Date.now() - this.chartStartTime;
+			// if (!data || isNaN(data)) { data = 0; }
+			if ((elapsedTime / 1000 / 60) > this.maxElapsedChartTimeMinutes) {
+				this.log.info("Removing data");
+				this.lineChart.removeData();
+			}
+
+			this.log.info("Updating chart... " + elapsedTime / 1000 / 60);
+			this.lineChart.addData([this.currentSpeed, this.averageConsumption], "");
+		}.bind(this), this.chartUpdateRate);
+	},
 
 	/**
 	 * (lost)
@@ -163,7 +262,8 @@ CustomApplicationsHandler.register("app.kevcar", new CustomApplication({
 	 */
 
 	lost: function() {
-
+		clearInterval(this.updateTimer)
+		clearInterval(this.speedTimer)
 	},
 
 

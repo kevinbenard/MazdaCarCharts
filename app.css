@@ -15,3 +15,8 @@
 [app="app.kevcar"] {
 	background-color: #000000;
 }
+
+[app="app.kevcar"] #speedChart {
+	margin-left: 10px;
+	padding-right: 0px;
+}
