@@ -61,7 +61,7 @@ CustomApplicationsHandler.register("app.kevcar", new CustomApplication({
 		 * (title) The title of the application in the Application menu
 		 */
 
-		title: 'kevcar',
+		title: 'KevCar',
 
 		/**
 		 * (statusbar) Defines if the statusbar should be shown
@@ -114,9 +114,7 @@ CustomApplicationsHandler.register("app.kevcar", new CustomApplication({
 
 
 	/******************************
-	*
 	* INITIALIZE GLOBAL VARIABLES
-	*
 	******************************/
 	lineChart: function() { },
 	isChartInitialized: false,
@@ -148,8 +146,10 @@ CustomApplicationsHandler.register("app.kevcar", new CustomApplication({
 		this.speedChart = $("<canvas/>").attr({id: "speedChart", width: '775', height: '400px'})
 
 		this.chartStartTime = Date.now();
-		
-		// Set vehicle speed event subscription
+	},
+
+
+	setDataSubscriptions: function() {
 		this.subscribe(VehicleData.vehicle.speed, function(speed) {
 			this.currentSpeed = speed;
 		}.bind(this));
@@ -157,8 +157,8 @@ CustomApplicationsHandler.register("app.kevcar", new CustomApplication({
 		this.subscribe(VehicleData.fuel.averageconsumption, function(consumption) {
 			this.averageConsumption = consumption;
 		}.bind(this));
-	},
 
+	},
 	/**
 	 * (focused)
 	 *
@@ -176,7 +176,6 @@ CustomApplicationsHandler.register("app.kevcar", new CustomApplication({
 	},
 
 	initializeChart: function() {
-		var that = this;
 		this.drawTimer = setInterval(function() {
 			this.drawChart();
 			this.isChartInitialized = true;
@@ -220,25 +219,21 @@ CustomApplicationsHandler.register("app.kevcar", new CustomApplication({
 					}
 				]
 			};
-			// this.Chart.defaults.global.showTooltips = false;
 
 			var options = {
-				///Boolean - Whether grid lines are shown across the chart
 				showTooltips: false,
 				scaleShowGridLines: true,
 				scaleShowHorizontalLines: true,
 				segmentShowStroke : true,
 				pointDot : false,
-				// scaleShowLabels: false,
 			};
 			this.lineChart = new Chart(ctx).Line(data, options);
 		}
 	},
 
-	updateChart: function(data) {
+	updateChart: function() {
 		this.updateTimer = setInterval(function() {
 			var elapsedTime = Date.now() - this.chartStartTime;
-			// if (!data || isNaN(data)) { data = 0; }
 			if ((elapsedTime / 1000 / 60) > this.maxElapsedChartTimeMinutes) {
 				this.log.info("Removing data");
 				this.lineChart.removeData();
